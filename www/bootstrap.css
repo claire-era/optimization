@@ -3,6 +3,10 @@ hr {
   border-radius: 1px;
 }
 
+.step, .tableaupanel, .main {
+	font-family: 'Candara';
+}
+
 .ans {
 	background-color:rgba(167, 171, 186, 0.20);
 	padding: 5% 5% 20% 5%;
@@ -10,17 +14,9 @@ hr {
 	border-radius: 5px;
 }
 
-.main {
-	background-color:rgba(167, 171, 186, 0.30);	
-}
-
 .sidebar {
 	width: 100%;
 	font-family: 'Candara';
-}
-
-.step, .tableaupanel, .main {
-	font-family: 'Candara'
 }
 
 .demands, .supply {

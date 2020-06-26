@@ -1,3 +1,27 @@
+#FUNCTION: SimplexBackend: run matrix using a sample data 
+SimplexBackend <- function(supply, demand, data){
+  if(sum(demand)>sum(supply)){
+    return(NA) #No feasible solution
+  }else{
+    #PHASE A. GET A FEASIBLE TABLEAU
+    result = CreateTab(supply, demand, data) #inside contains the inverse of the objective function embedded in the tableau
+    
+    feasible_tab = GetFeasibleTab(result)
+    
+    #PHASE B. APPLY STANDARD MAXIMIZATION IN TABLEAU
+    res=MaximizeTab(feasible_tab)
+    
+    final_tab=res$final_tab
+    ftab <<- final_tab
+    tablist=res$tab_list
+    
+    mcost = ((final_tab[nrow(final_tab),ncol(final_tab)])*-1)
+    
+    res = list(init_tab = feasible_tab, final_tab = final_tab, tablist = tablist, mincost = mcost)
+    return(res)
+  }
+}
+
 #FUNCTION: CreateTab: creates tableau containing surplus variables. needs further modification
 #RETURN VALUES: initialTableau, dataCnt, slackVarCnt -> basicially tableau na may negatives ganun.
 CreateTab <- function(supply, demand, data){
@@ -342,4 +366,69 @@ SolutionTable <- function(tab){
   dimnames(soltab) = list(NULL,c("Sacramento", "Salt Lake City","Albuquerque","Chicago","New York City","Total"))
   
   return(soltab)
+}
+
+Gaussian <- function(ma){
+  n = dim(ma)[1]
+  c = dim(ma)[2]
+  
+  # pivoting
+  m = ma[order(ma[1:n,1],decreasing = TRUE),]
+  for(i in seq(1, nrow(m)-1)){
+    pivot_e = m[i,i]
+    for(j in seq(i+1, nrow(m))){
+      mult = m[j,i] / pivot_e
+      vtbs = m[i,] * mult
+      new_r = m[j,] - vtbs
+      m[j,] = new_r
+    }
+  }
+  x = c(1,2,3)
+  b = m[,ncol(m)]
+  j = i
+  #backward substitution
+  k = nrow(m)
+  x = backsolve(m,b,k, upper.tri = TRUE, transpose = FALSE)
+  
+  return(x)
+}
+
+PolynomialRegression <- function(x, y, order){
+  m = matrix(nrow = order + 1,ncol = order + 2) #create empty matrix with dimensions m(order+1, order+2)
+  # x = datapoints[[1]]
+  # y = datapoints[[2]]
+  
+  #CONSTRUCT ACM GIVEN THE DATA POINTS
+  for(i in 1:nrow(m)){
+    for(j in 1:ncol(m)){
+      if(i==1 && j==1){ #for the first element m[1,1]
+        m[i,j] = length(x)
+      }else{ #for the rest of the elements of the matrix
+        m[i,j] = sum(x^((j-1)+(i-1)))
+        if(j==ncol(m)){ #if last element of current row
+          if(i==1) m[i,j] = sum(y)
+          else  m[i,j] = sum((x^(i-1))*(y))
+        }
+      }
+    }
+  }
+  
+  # print(m)
+  #GENERATE POLYNOMIAL STRING
+  ss = Gaussian(m) #SOLVE FOR THE SYSTEM
+  poly_string = "function(x) "
+  for(i in 1:length(ss)){ #GENERATE POLYNOMIAL STRING
+    if(i==length(ss)){
+      poly_string = paste(poly_string,ss[i]," * x ^ ",i-1,sep="")
+    }else if(i==1){
+      poly_string = paste(poly_string,ss[i]," + ",sep="")
+    }else{
+      poly_string = paste(poly_string,ss[i]," * x ^ ",i-1," + ",sep="")
+    }
+  }
+  #EVALUATE POLYNOMIAL STRING TO BE A FUNCTION
+  poly_func = eval(parse(text=poly_string))
+  results = list(augcoeffmatrix = m, unknowns = ss, s = poly_string, f = poly_func)
+  return(results)
+  
 }
